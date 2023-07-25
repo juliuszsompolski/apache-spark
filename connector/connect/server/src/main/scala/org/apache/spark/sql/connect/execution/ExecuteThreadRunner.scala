@@ -95,8 +95,8 @@ private[connect] class ExecuteThreadRunner(executeHolder: ExecuteHolder) extends
       } finally {
         executeHolder.sessionHolder.session.sparkContext.removeJobTag(executeHolder.jobTag)
         executeHolder.sparkSessionTags.foreach { tag =>
-          executeHolder.sessionHolder.session.sparkContext
-            .removeJobTag(executeHolder.tagToSparkJobTag(tag))
+          executeHolder.sessionHolder.session.sparkContext.removeJobTag(
+            ExecuteSessionTag(executeHolder.sessionHolder.userId, executeHolder.sessionHolder.sessionId, tag))
         }
       }
     } catch {
@@ -128,7 +128,8 @@ private[connect] class ExecuteThreadRunner(executeHolder: ExecuteHolder) extends
       session.sparkContext.addJobTag(executeHolder.jobTag)
       // Also set all user defined tags as Spark Job tags.
       executeHolder.sparkSessionTags.foreach { tag =>
-        session.sparkContext.addJobTag(executeHolder.tagToSparkJobTag(tag))
+        session.sparkContext.addJobTag(
+          ExecuteSessionTag(executeHolder.sessionHolder.userId, executeHolder.sessionHolder.sessionId, tag))
       }
       session.sparkContext.setJobDescription(
         s"Spark Connect - ${StringUtils.abbreviate(debugString, 128)}")
