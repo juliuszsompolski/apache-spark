@@ -200,4 +200,12 @@ private[connect] class SparkConnectExecutionManager() extends Logging {
     }
     logInfo("Finished periodic run of SparkConnectExecutionManager maintenance.")
   }
+
+  // Testing only
+  private[connect] def detachAllExecutionRpcs(): Unit = {
+    executionsLock.synchronized {
+      executions.values.foreach { executeHolder =>
+        executeHolder.
+    }
+  }
 }

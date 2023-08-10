@@ -268,6 +268,11 @@ private[connect] class ExecuteHolder(
 
   /** Get key used by SparkConnectExecutionManager global tracker. */
   def key: ExecuteKey = ExecuteKey(sessionHolder.userId, sessionHolder.sessionId, operationId)
+
+  // Testing only
+  private[connect] def interruptAllRpcs = synchronized {
+    grpcResponseSenders.foreach(_.interrupt)
+  }
 }
 
 /** Used to identify ExecuteHolder jobTag among SparkContext.SPARK_JOB_TAGS. */
