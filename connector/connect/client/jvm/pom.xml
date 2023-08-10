@@ -154,6 +154,7 @@
               <include>org.checkerframework:*</include>
               <include>org.apache.spark:spark-connect-common_${scala.binary.version}</include>
               <include>org.apache.spark:spark-common-utils_${scala.binary.version}</include>
+              <include>org.apache.spark:spark-sql-api_${scala.binary.version}</include>
             </includes>
           </artifactSet>
           <relocations>
