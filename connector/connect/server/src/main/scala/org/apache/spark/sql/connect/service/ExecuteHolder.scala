@@ -269,8 +269,8 @@ private[connect] class ExecuteHolder(
   /** Get key used by SparkConnectExecutionManager global tracker. */
   def key: ExecuteKey = ExecuteKey(sessionHolder.userId, sessionHolder.sessionId, operationId)
 
-  // Testing only
-  private[connect] def interruptAllRpcs = synchronized {
+  // Visible for testing
+  private[connect] def interruptAllRpcs() = synchronized {
     grpcResponseSenders.foreach(_.interrupt)
   }
 }

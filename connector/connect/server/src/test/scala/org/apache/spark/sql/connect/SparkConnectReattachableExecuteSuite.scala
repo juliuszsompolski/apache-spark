@@ -59,5 +59,7 @@ class SparkConnectReattachableExecuteSuite extends SharedSparkSession {
 
     val iter = client.execute(plan)
     iter.next()
+    SparkConnectService.executionManager.interruptAllExecutionRpcs()
+    iter.next()
   }
 }

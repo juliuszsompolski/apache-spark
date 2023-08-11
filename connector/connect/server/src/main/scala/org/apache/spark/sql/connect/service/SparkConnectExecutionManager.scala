@@ -202,10 +202,11 @@ private[connect] class SparkConnectExecutionManager() extends Logging {
   }
 
   // Testing only
-  private[connect] def detachAllExecutionRpcs(): Unit = {
+  private[connect] def interruptAllExecutionRpcs(): Unit = {
     executionsLock.synchronized {
       executions.values.foreach { executeHolder =>
-        executeHolder.
+        executeHolder.interruptAllRpcs()
+      }
     }
   }
 }
