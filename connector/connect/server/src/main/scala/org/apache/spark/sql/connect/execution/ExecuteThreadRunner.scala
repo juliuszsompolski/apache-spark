@@ -195,7 +195,7 @@ private[connect] class ExecuteThreadRunner(executeHolder: ExecuteHolder) extends
     val responseObserver = executeHolder.responseObserver
 
     val command = request.getPlan.getCommand
-    val planner = new SparkConnectPlanner(executeHolder.sessionHolder)
+    val planner = new SparkConnectPlanner(executeHolder.sessionHolder, Some(executeHolder))
     planner.process(
       command = command,
       responseObserver = responseObserver,
