@@ -25,6 +25,7 @@ import scala.jdk.CollectionConverters._
 import scala.reflect.runtime.universe.TypeTag
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
+import com.google.protobuf.{Any => ProtoAny}
 import io.grpc.ClientInterceptor
 import org.apache.arrow.memory.RootAllocator
 
@@ -730,6 +731,14 @@ class SparkSession private[sql] (
    */
   def clearTags(): Unit = {
     client.clearTags()
+  }
+
+  def addRequestExtension(extension: ProtobufAny): Unit = {
+    client.addRequestExtension(extension)
+  }
+
+  def popRequestExtension(): Unit = {
+    client.popRequestExtension()
   }
 
   /**

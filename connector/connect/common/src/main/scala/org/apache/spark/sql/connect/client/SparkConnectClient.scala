@@ -22,10 +22,11 @@ import java.util.{Locale, UUID}
 import java.util.concurrent.Executor
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 import scala.util.Properties
 
-import com.google.protobuf.ByteString
+import com.google.protobuf.{Any => ProtoAny, ByteString}
 import io.grpc._
 
 import org.apache.spark.SparkBuildInfo.{spark_version => SPARK_VERSION}
@@ -40,8 +41,6 @@ import org.apache.spark.sql.connect.common.config.ConnectCommon
 private[sql] class SparkConnectClient(
     private[sql] val configuration: SparkConnectClient.Configuration,
     private val channel: ManagedChannel) {
-
-  private val userContext: UserContext = configuration.userContext
 
   private[this] val bstub = new CustomSparkConnectBlockingStub(channel, configuration.retryPolicy)
   private[this] val stub = new CustomSparkConnectStub(channel, configuration.retryPolicy)
@@ -272,7 +271,34 @@ private[sql] class SparkConnectClient(
     tags.get.clear()
   }
 
-  def copy(): SparkConnectClient = configuration.toSparkConnectClient
+  private def userContext: UserContext = {
+    configuration
+      .userContext.toBuilder.addAllExtensions(userContextExtensions.get().asJava).build()
+  }
+
+  private def userContextExtensions: InheritableThreadLocal[mutable.ArrayBuffer[=> ProtoAny]] =
+    new InheritableThreadLocal[ArrayBuffer[ProtoAny]] {
+      override def childValue(parentValue: ArrayBuffer[ProtoAny]): ArrayBuffer[ProtoAny] = {
+        // Modifications in the child thread should not affect the parent thread.
+        parentValue.clone()
+      }
+
+      override protected def initialValue(): ArrayBuffer[ProtoAny] = ArrayBuffer.empty
+    }
+
+  private[sql] def addUserContextExtension(extension: ProtoAny): Unit = {
+    userContextExtensions.get().append(extension)
+  }
+
+  private[sql] def popUserContextExtension(): Unit = {
+    userContextExtensions.get().remove(userContextExtensions.get().size - 1)
+  }
+
+  def copy(): SparkConnectClient = {
+    val client = configuration.toSparkConnectClient
+    userContextExtensions.get.foreach { case e: ProtoAny => client.addUserContextExtension(e) }
+    client
+  }
 
   /**
    * Add a single artifact to the client session.
