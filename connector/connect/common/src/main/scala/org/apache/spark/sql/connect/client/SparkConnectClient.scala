@@ -276,14 +276,14 @@ private[sql] class SparkConnectClient(
       .userContext.toBuilder.addAllExtensions(userContextExtensions.get().asJava).build()
   }
 
-  private def userContextExtensions: InheritableThreadLocal[mutable.ArrayBuffer[=> ProtoAny]] =
+  private def userContextExtensions: InheritableThreadLocal[mutable.ArrayBuffer[(String, => ProtoAny)]] =
     new InheritableThreadLocal[ArrayBuffer[ProtoAny]] {
       override def childValue(parentValue: ArrayBuffer[ProtoAny]): ArrayBuffer[ProtoAny] = {
         // Modifications in the child thread should not affect the parent thread.
         parentValue.clone()
       }
 
-      override protected def initialValue(): ArrayBuffer[ProtoAny] = ArrayBuffer.empty
+      override protected def initialValue(): ArrayBuffer[(String, => ProtoAny)] = ArrayBuffer.empty
     }
 
   private[sql] def addUserContextExtension(extension: ProtoAny): Unit = {
