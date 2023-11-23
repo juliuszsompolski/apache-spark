@@ -19,6 +19,7 @@ package org.apache.spark.sql.connect.service
 import java.util.UUID
 
 import org.scalatest.concurrent.Eventually
+import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.SpanSugar._
 
 import org.apache.spark.SparkException
@@ -38,16 +39,29 @@ class SparkConnectServiceE2ESuite extends SparkConnectServerTest {
     // TCP connection to localhost:serverPort.
     val channel = SparkConnectClient.Configuration(port = serverPort).createChannel()
     val stub = proto.SparkConnectServiceGrpc.newBlockingStub(channel)
-    val request = buildExecutePlanRequest(buildPlan(BIG_ENOUGH_QUERY))
+    val request1 = buildExecutePlanRequest(buildPlan(BIG_ENOUGH_QUERY))
+    val request2 = buildExecutePlanRequest(buildPlan(BIG_ENOUGH_QUERY))
 
     assert(SparkConnectService.executionManager.listExecuteHolders.length == 0)
 
-    val iter1 = stub.executePlan(request)
-    // GRPC 1.59: just creating the iterator triggers query to be sent to server.
-    Eventually.eventually(timeout(eventuallyTimeout)) {
-      assert(SparkConnectService.executionManager.listExecuteHolders.length == 1)
+    val iter1 = stub.executePlan(request1)
+    // GRPC 1.56: just creating the iterator doesn't trigger query to be sent to server.
+    val ex = intercept[TestFailedDueToTimeoutException] {
+      Eventually.eventually(timeout(eventuallyTimeout)) {
+        assert(SparkConnectService.executionManager.listExecuteHolders.length == 1)
+      }
     }
+    assert(ex.getMessage.contains("List() had length 0 instead of expected length 1"))
+    // It is sent to server and starts execution after interacting with the iterator.
     iter1.hasNext()
+    assert(SparkConnectService.executionManager.listExecuteHolders.length == 1)
+
+    // GRPC 1.56: 2nd request is sent to query directly after calling the method.
+    // Could it be that when the first one was called the channel was not fully resolved?
+    val iter2 = stub.executePlan(request2)
+    Eventually.eventually(timeout(eventuallyTimeout)) {
+      assert(SparkConnectService.executionManager.listExecuteHolders.length == 2)
+    }
   }
 
   test("Execute is sent eagerly to the server upon iterator creation") {
