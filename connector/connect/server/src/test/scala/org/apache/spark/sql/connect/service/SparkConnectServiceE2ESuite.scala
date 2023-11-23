@@ -22,7 +22,9 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar._
 
 import org.apache.spark.SparkException
+import org.apache.spark.connect.proto
 import org.apache.spark.sql.connect.SparkConnectServerTest
+import org.apache.spark.sql.connect.client.SparkConnectClient
 
 class SparkConnectServiceE2ESuite extends SparkConnectServerTest {
 
@@ -31,6 +33,22 @@ class SparkConnectServiceE2ESuite extends SparkConnectServerTest {
   // even if the connection got closed, the client would see it as succeeded because the results
   // were all already in the buffer.
   val BIG_ENOUGH_QUERY = "select * from range(1000000)"
+
+  test("GRPC-10697") {
+    // TCP connection to localhost:serverPort.
+    val channel = SparkConnectClient.Configuration(port = serverPort).createChannel()
+    val stub = proto.SparkConnectServiceGrpc.newBlockingStub(channel)
+    val request = buildExecutePlanRequest(buildPlan(BIG_ENOUGH_QUERY))
+
+    assert(SparkConnectService.executionManager.listExecuteHolders.length == 0)
+
+    val iter1 = stub.executePlan(request)
+    // GRPC 1.59: just creating the iterator triggers query to be sent to server.
+    Eventually.eventually(timeout(eventuallyTimeout)) {
+      assert(SparkConnectService.executionManager.listExecuteHolders.length == 1)
+    }
+    iter1.hasNext()
+  }
 
   test("Execute is sent eagerly to the server upon iterator creation") {
     // This behavior changed with grpc upgrade from 1.56.0 to 1.59.0.
